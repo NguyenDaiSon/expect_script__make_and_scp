@@ -1,0 +1,37 @@
+#!/usr/bin/expect
+#
+# Nguyen Dai Son
+#
+# Simple expect script in order to:
+# - build the target
+# - transfer the target to a multiple destination hosts
+# - the service is prodived by the blade as the result of IPC between processes (targets).
+# - the target name is read from the Makefile. 
+# - for example: the target format in the Makefile is as below:
+# 	Makefile
+# 	--------
+# 	EXECUTABLE = dnsc 
+#
+
+set target [exec grep -w EXECUTABLE Makefile | cut -d= -f2 | awk {{$1=$1;print}}] ;
+
+if {[catch {exec >@stdout 2>@stderr make} erro_str] != 0} {
+    puts "${erro_str}"
+    exit
+}
+
+set dest_host_ip_addrs \
+        [
+                list \
+                "10.11.12.13" \
+		"10.11.12.14"
+        ]
+
+for {set host_index 0} {${host_index} < [llength ${dest_host_ip_addrs}]} {incr host_index} {
+        set ip_addr [lindex ${dest_host_ip_addrs} ${host_index}];
+	set timeout -1
+        spawn scp ${target} root\@${ip_addr}:/tmp
+        expect -re ".*assword:" { send "daison\r\n" }
+        expect -ex ".*$"
+}
+
